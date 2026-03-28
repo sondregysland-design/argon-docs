@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1E40AF;
+  --color-primary-light: #3B82F6;
+  --color-primary-dark: #1E3A8A;
+  --color-accent: #0EA5E9;
+  --color-accent-dim: #0C4A6E;
+  --color-surface: #F8FAFC;
+  --color-surface-raised: #FFFFFF;
+  --color-panel: #0F172A;
+  --color-panel-light: #1E293B;
+  --color-text: #1E293B;
+  --color-text-light: #64748B;
+  --color-text-inverse: #F1F5F9;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-border: #E2E8F0;
+  --color-border-subtle: #F1F5F9;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Dot grid background texture */
+.bg-dotgrid {
+  background-image: radial-gradient(circle, #cbd5e1 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+}
+
+/* Staggered field reveal animation */
+@keyframes field-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-field-in {
+  animation: field-in 0.4s ease-out both;
+}
+
+/* Confidence pulse */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Upload zone breathing */
+@keyframes breathe {
+  0%, 100% { border-color: #94a3b8; }
+  50% { border-color: #3b82f6; }
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* Extraction scanning line */
+@keyframes scan {
+  0% { top: 0; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.animate-scan {
+  animation: scan 2.5s ease-in-out infinite;
+}
+
+/* Page load stagger */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out both;
+}
