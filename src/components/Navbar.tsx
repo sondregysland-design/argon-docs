@@ -24,7 +24,7 @@ export function Navbar() {
               <div className="absolute -inset-1 rounded-full bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-bold tracking-tight text-panel">
+              <span className="text-lg font-bold tracking-tight text-primary">
                 ARGON
               </span>
               <span className="text-lg font-light text-text-light tracking-wide">
