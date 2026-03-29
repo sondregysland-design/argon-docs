@@ -37,16 +37,15 @@ export async function runExtraction(
         detectedType = result.detectedType;
       }
 
-      // Store page result
+      // Update page with extraction results (page already exists from upload)
       const pageId = `${extractionId}-page-${i + 1}`;
-      await db.insert(extractionPages).values({
-        id: pageId,
-        extractionId,
-        pageNumber: i + 1,
-        imageBase64: pageImage,
-        pageData: JSON.stringify(result.fields),
-        confidence: result.overallConfidence,
-      });
+      await db
+        .update(extractionPages)
+        .set({
+          pageData: JSON.stringify(result.fields),
+          confidence: result.overallConfidence,
+        })
+        .where(eq(extractionPages.id, pageId));
 
       allFields.push(...result.fields);
       totalConfidence += result.overallConfidence;

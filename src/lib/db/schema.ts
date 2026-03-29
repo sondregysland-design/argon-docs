@@ -20,7 +20,7 @@ export const extractions = sqliteTable("extractions", {
   extractedData: text("extracted_data"), // JSON: extracted fields
   confidence: real("confidence"),
   status: text("status", {
-    enum: ["processing", "completed", "failed"],
+    enum: ["uploading", "processing", "completed", "failed"],
   })
     .notNull()
     .default("processing"),

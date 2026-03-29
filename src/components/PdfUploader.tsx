@@ -68,21 +68,39 @@ export function PdfUploader({ templates }: { templates: Template[] }) {
       setIsUploading(true);
 
       try {
+        // 1. Render PDF to images client-side
         const images = await renderPdfToImages(file);
 
+        // 2. Create extraction record (metadata only, small payload)
         const res = await fetch("/api/extract", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             fileName: file.name,
             templateId: selectedTemplate,
-            images,
+            pageCount: images.length,
           }),
         });
         const data = await res.json();
-        if (data.id) {
-          router.push(`/extract/${data.id}`);
+        if (!data.id) throw new Error("No extraction ID");
+
+        // 3. Upload each page image individually (avoids body size limits)
+        for (let i = 0; i < images.length; i++) {
+          await fetch(`/api/extract/${data.id}/page`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              pageNumber: i + 1,
+              imageBase64: images[i],
+            }),
+          });
         }
+
+        // 4. Trigger Claude extraction
+        await fetch(`/api/extract/${data.id}/run`, { method: "POST" });
+
+        // 5. Navigate to results
+        router.push(`/extract/${data.id}`);
       } catch {
         setIsUploading(false);
         setFileName(null);

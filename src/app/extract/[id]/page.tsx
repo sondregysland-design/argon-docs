@@ -52,7 +52,7 @@ export default function ExtractPage({
         if (active) {
           setData(json);
           // Keep polling if still processing
-          if (json.status === "processing") {
+          if (json.status === "processing" || json.status === "uploading") {
             setTimeout(poll, 2000);
           }
         }

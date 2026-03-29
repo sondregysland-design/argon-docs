@@ -1,18 +1,17 @@
 import { db } from "@/lib/db";
 import { extractions } from "@/lib/db/schema";
 import { generateId } from "@/lib/utils";
-import { runExtraction } from "@/lib/extraction/pipeline";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { fileName, templateId, images } = body as {
+    const { fileName, templateId, pageCount } = body as {
       fileName: string;
       templateId: string | null;
-      images: string[];
+      pageCount: number;
     };
 
-    if (!fileName || !fileName.endsWith(".pdf") || !images?.length) {
+    if (!fileName || !fileName.endsWith(".pdf") || !pageCount) {
       return Response.json(
         { error: "Vennligst last opp en gyldig PDF-fil." },
         { status: 400 }
@@ -21,19 +20,15 @@ export async function POST(request: Request) {
 
     const extractionId = generateId();
 
-    // Create extraction record
     await db.insert(extractions).values({
       id: extractionId,
       templateId: templateId || null,
       fileName,
-      status: "processing",
-      pageCount: images.length,
+      status: "uploading",
+      pageCount,
     });
 
-    // Run extraction in background (non-blocking)
-    runExtraction(extractionId, images, templateId).catch(console.error);
-
-    return Response.json({ id: extractionId, status: "processing" });
+    return Response.json({ id: extractionId, status: "uploading" });
   } catch (error) {
     console.error("Upload error:", error);
     return Response.json(
