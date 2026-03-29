@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { renderPdfToImages } from "@/lib/pdf-client";
 
 interface Template {
   id: string;
@@ -66,16 +67,17 @@ export function PdfUploader({ templates }: { templates: Template[] }) {
       setFileName(file.name);
       setIsUploading(true);
 
-      const formData = new FormData();
-      formData.append("file", file);
-      if (selectedTemplate) {
-        formData.append("templateId", selectedTemplate);
-      }
-
       try {
+        const images = await renderPdfToImages(file);
+
         const res = await fetch("/api/extract", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: file.name,
+            templateId: selectedTemplate,
+            images,
+          }),
         });
         const data = await res.json();
         if (data.id) {

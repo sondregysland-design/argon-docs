@@ -91,7 +91,7 @@ export async function extractFromImage(
             type: "image",
             source: {
               type: "base64",
-              media_type: "image/png",
+              media_type: "image/jpeg",
               data: imageBase64,
             },
           },

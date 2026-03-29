@@ -1,13 +1,12 @@
 import { db } from "../db";
 import { extractions, extractionPages, templates } from "../db/schema";
 import { eq, sql } from "drizzle-orm";
-import { pdfToImages } from "./pdf-to-images";
 import { extractFromImage, type ExtractionResult } from "./claude";
 import type { TemplateField } from "./templates";
 
 export async function runExtraction(
   extractionId: string,
-  pdfBuffer: ArrayBuffer,
+  images: string[],
   templateId: string | null
 ): Promise<void> {
   try {
@@ -24,14 +23,6 @@ export async function runExtraction(
         templateName = template.name;
       }
     }
-
-    // Convert PDF to images
-    const images = await pdfToImages(pdfBuffer);
-
-    await db
-      .update(extractions)
-      .set({ pageCount: images.length })
-      .where(eq(extractions.id, extractionId));
 
     // Extract data from each page
     const allFields: ExtractionResult["fields"] = [];
