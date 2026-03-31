@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { extractions, extractionPages, templates } from "../db/schema";
 import { eq, sql } from "drizzle-orm";
-import { extractFromImage, type ExtractionResult } from "./claude";
+import { extractFromImage, type ExtractionResult, type ExtractedField } from "./claude";
 import type { TemplateField } from "./templates";
 
 export async function runExtraction(
@@ -19,34 +19,43 @@ export async function runExtraction(
         where: eq(templates.id, templateId),
       });
       if (template) {
-        fields = JSON.parse(template.fields) as TemplateField[];
+        try {
+          fields = JSON.parse(template.fields) as TemplateField[];
+        } catch {
+          console.error("Invalid template fields JSON");
+        }
         templateName = template.name;
       }
     }
 
-    // Extract data from each page
-    const allFields: ExtractionResult["fields"] = [];
+    // Extract data from all pages in parallel
+    const allFields: ExtractedField[] = [];
     let totalConfidence = 0;
     let detectedType: string | undefined;
 
-    for (let i = 0; i < images.length; i++) {
-      const pageImage = images[i];
-      const result = await extractFromImage(pageImage, fields, templateName);
+    const results = await Promise.all(
+      images.map((pageImage) => extractFromImage(pageImage, fields, templateName))
+    );
 
+    // Update all pages in parallel
+    await Promise.all(
+      results.map((result, i) => {
+        const pageId = `${extractionId}-page-${i + 1}`;
+        return db
+          .update(extractionPages)
+          .set({
+            pageData: JSON.stringify(result.fields),
+            confidence: result.overallConfidence,
+          })
+          .where(eq(extractionPages.id, pageId));
+      })
+    );
+
+    // Aggregate results
+    for (const result of results) {
       if (!detectedType && result.detectedType) {
         detectedType = result.detectedType;
       }
-
-      // Update page with extraction results (page already exists from upload)
-      const pageId = `${extractionId}-page-${i + 1}`;
-      await db
-        .update(extractionPages)
-        .set({
-          pageData: JSON.stringify(result.fields),
-          confidence: result.overallConfidence,
-        })
-        .where(eq(extractionPages.id, pageId));
-
       allFields.push(...result.fields);
       totalConfidence += result.overallConfidence;
     }
@@ -78,15 +87,18 @@ export async function runExtraction(
     console.error("Extraction failed:", error);
     await db
       .update(extractions)
-      .set({ status: "failed" })
+      .set({
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "Ukjent feil",
+      })
       .where(eq(extractions.id, extractionId));
   }
 }
 
 function mergeFields(
-  fields: ExtractionResult["fields"]
-): ExtractionResult["fields"] {
-  const fieldMap = new Map<string, ExtractionResult["fields"][0]>();
+  fields: ExtractedField[]
+): ExtractedField[] {
+  const fieldMap = new Map<string, ExtractedField>();
 
   for (const field of fields) {
     const existing = fieldMap.get(field.name);

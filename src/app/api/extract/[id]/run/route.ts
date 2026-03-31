@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { runExtraction } from "@/lib/extraction/pipeline";
 import type { NextRequest } from "next/server";
 
+export const maxDuration = 60;
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -37,15 +39,33 @@ export async function POST(
       .set({ status: "processing" })
       .where(eq(extractions.id, id));
 
-    // Run extraction in background
+    // Collect images in page order, filtering out any missing base64 values
     const images = pages
       .sort((a, b) => a.pageNumber - b.pageNumber)
-      .map((p) => p.imageBase64!)
-      .filter(Boolean);
+      .map((p) => p.imageBase64)
+      .filter(Boolean) as string[];
 
-    runExtraction(id, images, extraction.templateId).catch(console.error);
+    if (images.length !== pages.length) {
+      return Response.json(
+        { error: "En eller flere sider mangler bildedata." },
+        { status: 400 }
+      );
+    }
 
-    return Response.json({ ok: true, status: "processing" });
+    // Run extraction inline (awaited) so it completes within the function timeout
+    try {
+      await runExtraction(id, images, extraction.templateId);
+    } catch (e) {
+      console.error("Extraction failed:", e);
+      const errorMessage =
+        e instanceof Error ? e.message : "Ukjent feil under ekstraksjon.";
+      return Response.json(
+        { ok: false, status: "failed", error: errorMessage },
+        { status: 500 }
+      );
+    }
+
+    return Response.json({ ok: true, status: "completed" });
   } catch (error) {
     console.error("Run extraction error:", error);
     return Response.json({ error: "Feil ved oppstart." }, { status: 500 });

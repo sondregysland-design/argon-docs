@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const templates = sqliteTable("templates", {
@@ -24,19 +24,26 @@ export const extractions = sqliteTable("extractions", {
   })
     .notNull()
     .default("processing"),
+  errorMessage: text("error_message"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const extractionPages = sqliteTable("extraction_pages", {
-  id: text("id").primaryKey(),
-  extractionId: text("extraction_id")
-    .notNull()
-    .references(() => extractions.id, { onDelete: "cascade" }),
-  pageNumber: integer("page_number").notNull(),
-  imageBase64: text("image_base64"),
-  pageData: text("page_data"), // JSON: per-page extracted fields
-  confidence: real("confidence"),
-});
+export const extractionPages = sqliteTable(
+  "extraction_pages",
+  {
+    id: text("id").primaryKey(),
+    extractionId: text("extraction_id")
+      .notNull()
+      .references(() => extractions.id, { onDelete: "cascade" }),
+    pageNumber: integer("page_number").notNull(),
+    imageBase64: text("image_base64"),
+    pageData: text("page_data"), // JSON: per-page extracted fields
+    confidence: real("confidence"),
+  },
+  (table) => [
+    index("extraction_pages_extraction_id_idx").on(table.extractionId),
+  ]
+);
 
 export type Template = typeof templates.$inferSelect;
 export type NewTemplate = typeof templates.$inferInsert;
