@@ -1,9 +1,16 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { TemplateField } from "./templates";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+let _anthropic: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!_anthropic) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY environment variable is required");
+    }
+    _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return _anthropic;
+}
 
 export interface ExtractedField {
   name: string;
@@ -79,7 +86,7 @@ export async function extractFromImage(
 ): Promise<ExtractionResult> {
   const systemPrompt = buildSystemPrompt(fields, templateName);
 
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 4096,
     system: systemPrompt,
@@ -111,11 +118,29 @@ export async function extractFromImage(
 
   // Extract JSON from response (handle markdown code blocks)
   let jsonText = textBlock.text.trim();
-  const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonMatch) {
-    jsonText = jsonMatch[1].trim();
+
+  // Strip markdown code fences (with or without closing fence)
+  const fencedMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fencedMatch) {
+    jsonText = fencedMatch[1].trim();
+  } else if (jsonText.startsWith("```")) {
+    // Opening fence without closing fence
+    jsonText = jsonText.replace(/^```(?:json)?\s*/, "").trim();
   }
 
-  const result: ExtractionResult = JSON.parse(jsonText);
-  return result;
+  // Fallback: extract the first JSON object by matching braces
+  if (!jsonText.startsWith("{")) {
+    const start = jsonText.indexOf("{");
+    const end = jsonText.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      jsonText = jsonText.slice(start, end + 1);
+    }
+  }
+
+  try {
+    const result: ExtractionResult = JSON.parse(jsonText);
+    return result;
+  } catch {
+    throw new Error(`Failed to parse Claude response as JSON: ${jsonText.slice(0, 200)}`);
+  }
 }
