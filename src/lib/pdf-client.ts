@@ -9,8 +9,9 @@ export async function renderPdfToImages(file: File): Promise<string[]> {
   // @ts-expect-error pdfjs-dist/build/pdf.mjs lacks type declarations
   const pdfjsLib = await import("pdfjs-dist/build/pdf.mjs");
 
+  // Use CDN-hosted worker matching the installed pdfjs-dist version
   pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.5.207/pdf.worker.min.mjs";
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.5.207/build/pdf.worker.min.mjs";
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) })
